@@ -365,7 +365,22 @@ function InstantDescCopy(){
 
     <div id="bSSTText"></div>
     <div id="bSSTCopy"></div>
-           
+        
+    <legend class="float-none w-auto">Note to SST Team </legend>
+  
+    <select id="bSST1" class="form-control" onchange="bSST()">
+    <option value=""></option>
+    <option value="Hi Team.<br><br>Please treat as SST. Received channel as Phone and updated it to Self-Service.<br><br>Thank you.">From Phone</option>
+    <option value="Hi Team.<br><br>Please treat as SST. Received channel as Chat and updated it to Self-Service.<br><br>Thank you.">From Chat</option>
+    <option value="Hi Team.<br><br>Please treat as SST. Received channel as Walk-in and updated it to Self-Service.<br><br>Thank you.">From Walk-in</option>
+    <option value="Hi Team.<br><br>Please treat as SST. Received channel as Email and updated it to Self-Service.<br><br>Thank you.">From Email</option>
+    <option value="Hi Team.<br><br>Please treat as SST. Received channel as External System and updated it to Self-Service.<br><br>Thank you.">From External System</option>
+    <option value="Treat as SST for EMEA. Ticket received during AMER hours. Thank you.">AMER to EMEA</option>
+    </select>
+
+    <div id="bSSTText"></div>
+    <div id="bSSTCopy"></div>
+        
     <script>
         function bSSTCopy(){
             const textToCopy = document.getElementById("bSSTText").innerText;
