@@ -394,15 +394,21 @@ function InstantDescCopy(){
         const SValue = rason.value;
         rason2.value = "";
         if (SValue === "1"){
-            rason2.value = "Misrouted/mishandled|(Agent Name)(Assignment Group)(SST)| KB number or No KB";
+            rason2.value = "Misrouted/mishandled|<Agent Name><Assignment Group>|NA";
         } else if (SValue === "2"){
-            rason2.value = "Outage|Tracking or Master Ticket";
+            rason2.value = "Invalid|<End-user contact><L2 Contact><No consultation from SME><Lead Approval Only>|NA";
         } else if (SValue ==="3"){
-            rason2.value = "Critical Escalation- (Proceed with the analysis for Critical Escalation)";
+            rason2.value = "Outage|<Tracking Ticket><Master Ticket>|NA";
         } else if (SValue ==="4"){
-            rason2.value = "GSD out of scope|Issue";
+            rason2.value = "GSD out of scope|Issue|<Knowledge Base Gap><L2 asking help to involve other teams>";
         } else if (SValue === "5"){
-            rason2.value = "Invalid";
+            rason2.value = "Critical Escalation|<VIP Sender><Prolonged case due pushback><Expedite Request>|NA";
+	} else if (SValue === "6"){
+            rason2.value = "SST|NA|NA";
+	} else if (SValue === "7"){
+            rason2.value = "Query|<Pending action from from L2 team><GSD SME Misguidance>|Support Ongoing";
+	} else if (SValue === "8"){
+            rason2.value = "GSD Action Item|Pending action from GSD team|Support Ongoing";
         }
     }
                function UpdateReason(){
