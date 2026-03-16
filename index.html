@@ -170,24 +170,23 @@
 
 <script>
 /* =========================
-   CM Template (Option B1 for Invalid duplicates)
+   CM Template (second Invalid removed)
    ========================= */
 const CM_TEMPLATE = {
-  shortDescription: "CM|<APAC><EMEA><AMER>|<BRCH><NBRCH><No Ticket>|<GSD><NGSD><No Ticket>|Sender|<APAC><EMEA><AMER>",
+  shortDescription: "CM|&lt;APAC&gt;&lt;EMEA&gt;&lt;AMER&gt;|&lt;BRCH&gt;&lt;NBRCH&gt;&lt;No Ticket&gt;|&lt;GSD&gt;&lt;NGSD&gt;&lt;No Ticket&gt;|Sender|&lt;APAC&gt;&lt;EMEA&gt;&lt;AMER&gt;",
   description: "Date Email Received|Subject Line",
   closureNotes: [
     "Misrouted|Assignment Group|NA",
     "Mishandled|Agent Name|NA",
 
-    // NOTE: these are the two internal Invalids; CM dropdown will show ONLY the FIRST "Invalid"
-    "Invalid__consult::Invalid|&amp;lt;End-user contact&amp;gt;&amp;lt;L2 Contact&amp;gt;&amp;lt;No consultation from SME&amp;gt;&amp;lt;Lead Approval Only&amp;gt;|NA",
-    "Invalid__escal::Invalid|NA|NA|NA|<No Ticket><Pending for Approval><No standard escalation process><No L1 triage><Vendor Issue>",
+    // ✅ Only ONE Invalid remains in CM
+    "Invalid__consult::Invalid|&amp;amp;lt;End-user contact&amp;amp;gt;&amp;amp;lt;L2 Contact&amp;amp;gt;&amp;amp;lt;No consultation from SME&amp;amp;gt;&amp;amp;lt;Lead Approval Only&amp;amp;gt;|NA",
 
-    "Outage|<Tracking Ticket><Master Ticket>|NA",
-    "GSD out of scope|Issue|<Knowledge Base Gap><L2 asking help to involve other teams>",
-    "Critical Escalation|<VIP Sender><Prolonged case due pushback><Expedite Request>|NA",
+    "Outage|&lt;Tracking Ticket&gt;&lt;Master Ticket&gt;|NA",
+    "GSD out of scope|Issue|&lt;Knowledge Base Gap&gt;&lt;L2 asking help to involve other teams&gt;",
+    "Critical Escalation|&lt;VIP Sender&gt;&lt;Prolonged case due pushback&gt;&lt;Expedite Request&gt;|NA",
     "SST|NA|NA",
-    "Query|<Pending action from from L2 team><GSD SME Misguidance>|Support Ongoing",
+    "Query|&lt;Pending action from from L2 team&gt;&lt;GSD SME Misguidance&gt;|Support Ongoing",
     "GSD Action Item|Pending action from GSD team|Support Ongoing"
   ]
 };
@@ -196,13 +195,13 @@ const CM_TEMPLATE = {
    Escal-only Closure List (separate)
    ========================= */
 const ESCAL_CLOSURE_NOTES = [
-  "People|<GSD><NGSD>|Resolution Owner|GSD Name/Resolver Group Name|<Ticket closed prematurely><Failed callback><Professionalism><Incomplete or incorrect troubleshooting>",
-  "Process|<GSD><NGSD>|Resolution Owner|KB Number/No KB|<Tickets bouncing around><Indicate KB defect><Indicate user's Issue>",
-  "Technology|<GSD><NGSD>|Resolution Owner|Configuration Item|<Recurring Issue><Multiple users affected>",
-  "Catalog|<GSD><NGSD>|Resolution Owner|Catalog Name|<User unable to fill out form correctly><Incorrect Catalog Raised>",
-  "Expedite|NA|Resolution Owner|CI/Catalog|<Work Stoppage><User finds the SLA too long>",
-  "Invalid|NA|NA|NA|<No Ticket><Pending for Approval><No standard escalation process><No L1 triage><Vendor Issue>",
-  "VIP|NA|Resolution Owner|CI/Catalog|<Work Stoppage><User finds the SLA too long><General Query>",
+  "People|&lt;GSD&gt;&lt;NGSD&gt;|Resolution Owner|GSD Name/Resolver Group Name|&lt;Ticket closed prematurely&gt;&lt;Failed callback&gt;&lt;Professionalism&gt;&lt;Incomplete or incorrect troubleshooting&gt;",
+  "Process|&lt;GSD&gt;&lt;NGSD&gt;|Resolution Owner|KB Number/No KB|&lt;Tickets bouncing around&gt;&lt;Indicate KB defect&gt;&lt;Indicate user's Issue&gt;",
+  "Technology|&lt;GSD&gt;&lt;NGSD&gt;|Resolution Owner|Configuration Item|&lt;Recurring Issue&gt;&lt;Multiple users affected&gt;",
+  "Catalog|&lt;GSD&gt;&lt;NGSD&gt;|Resolution Owner|Catalog Name|&lt;User unable to fill out form correctly&gt;&lt;Incorrect Catalog Raised&gt;",
+  "Expedite|NA|Resolution Owner|CI/Catalog|&lt;Work Stoppage&gt;&lt;User finds the SLA too long&gt;",
+  "Invalid|NA|NA|NA|&lt;No Ticket&gt;&lt;Pending for Approval&gt;&lt;No standard escalation process&gt;&lt;No L1 triage&gt;&lt;Vendor Issue&gt;",
+  "VIP|NA|Resolution Owner|CI/Catalog|&lt;Work Stoppage&gt;&lt;User finds the SLA too long&gt;&lt;General Query&gt;",
   "Support Escalation Ongoing|NA|Resolution Owner|NA",
   "Awaiting User Info|NA|Resolution Owner|NA",
   "Pending User Confirmation|NA|Resolution Owner|NA"
@@ -230,7 +229,7 @@ Thank you.`
    ========================= */
 function splitBar(str){ return String(str || "").split("|").map(t => t.trim()); }
 
-// ✅ NEW: normalizer (fixes hidden spaces / NBSP issues)
+// normalizer (fixes hidden spaces / NBSP issues)
 function normOpt(s){
   return String(s ?? "")
     .replace(/\u00A0/g, " ")
@@ -238,18 +237,18 @@ function normOpt(s){
     .replace(/\s+/g, " ");
 }
 
-// ✅ UPDATED: supports raw <>, escaped &lt;&gt; AND double-escaped &amp;lt;&amp;gt;
+// supports &lt;&gt;, &amp;lt;&amp;gt; AND &amp;amp;lt;&amp;amp;gt;
 function parseAngleOptions(token){
   const t = String(token ?? "");
 
-  // raw <...>
-  const raw  = [...t.matchAll(/<([^>]+)>/g)].map(m => m[1]);
+  // raw &lt;...&gt;
+  const raw  = [...t.matchAll(/&lt;([^&gt;]+)&gt;/g)].map(m => m[1]);
 
-  // escaped &lt;...&gt;
-  const esc  = [...t.matchAll(/&lt;([^&]+?)&gt;/g)].map(m => m[1]);
+  // escaped &amp;lt;...&amp;gt;
+  const esc  = [...t.matchAll(/&amp;lt;([^&amp;]+?)&amp;gt;/g)].map(m => m[1]);
 
-  // double-escaped &amp;lt;...&amp;gt;
-  const esc2 = [...t.matchAll(/&amp;lt;([^&]+?)&amp;gt;/g)].map(m => m[1]);
+  // double-escaped &amp;amp;lt;...&amp;amp;gt;
+  const esc2 = [...t.matchAll(/&amp;amp;lt;([^&amp;]+?)&amp;amp;gt;/g)].map(m => m[1]);
 
   const merged = [...raw, ...esc, ...esc2].map(normOpt).filter(Boolean);
 
@@ -273,11 +272,11 @@ function escapeHtml(str){
   })[s]);
 }
 
-/* ✅ UPDATED: added ["GSD","NGSD"] so <GSD><NGSD> becomes ONE dropdown */
+/* Dropdown groups */
 const DROPDOWN_GROUPS = [
   ["APAC","EMEA","AMER"],
   ["BRCH","NBRCH","No Ticket"],
-  ["GSD","NGSD"],                // ✅ One dropdown for <GSD><NGSD>
+  ["GSD","NGSD"],                // One dropdown for <GSD><NGSD>
   ["GSD","NGSD","No Ticket"],
   ["End-user contact","L2 Contact","No consultation from SME","Lead Approval Only"],
   ["Tracking Ticket","Master Ticket"],
@@ -293,7 +292,6 @@ const DROPDOWN_GROUPS = [
   ["Work Stoppage","User finds the SLA too long","General Query"]
 ];
 
-// ✅ UPDATED: robust matching using normalized options
 function isDropdownGroup(opts){
   const nOpts = (opts || []).map(normOpt);
   return DROPDOWN_GROUPS.some(g => {
@@ -317,13 +315,12 @@ function classifyToken(token, context){
   const trimmed = String(token ?? "").trim();
   const opts = parseAngleOptions(trimmed);
 
-  // ✅ UPDATED: robust "pure angles" detection for raw, escaped, and double-escaped
   const isPureAngles =
     opts.length > 0 &&
     trimmed
-      .replace(/<[^>]+>/g, "")
-      .replace(/&lt;[^&]+?&gt;/g, "")
-      .replace(/&amp;lt;[^&]+?&amp;gt;/g, "")
+      .replace(/&lt;[^&gt;]+&gt;/g, "")
+      .replace(/&amp;lt;[^&amp;]+?&amp;gt;/g, "")
+      .replace(/&amp;amp;lt;[^&amp;]+?&amp;amp;gt;/g, "")
       .trim() === "";
 
   if(CONSTANTS.has(trimmed)) return { kind:"const", label:"Constant", value:trimmed, required:false };
@@ -384,7 +381,7 @@ function applyEscalProcessDynamicRule(categoryLabel, fields){
 }
 
 /* =========================
-   CM storage (renamed keys) - saves dynamicDetail too
+   CM storage
    ========================= */
 const CM_STORAGE_PREFIX = "barTemplateBuilder.cm.closureCategory.";
 const CM_STORAGE_LAST_CATEGORY = "barTemplateBuilder.cm.lastClosureCategory";
@@ -417,7 +414,7 @@ function loadLastCmClosureCategory(){
 }
 
 /* =========================
-   Escal storage (separate keys) - saves dynamicDetail too
+   Escal storage
    ========================= */
 const ESCAL_STORAGE_PREFIX = "barTemplateBuilder.escal.closureCategory.";
 const ESCAL_STORAGE_LAST_CATEGORY = "barTemplateBuilder.escal.lastClosureCategory";
@@ -631,7 +628,7 @@ function renderFields(title, sectionKey, fields, onChange, showTodayBtn=false){
     row.className="row";
 
     const label = document.createElement("label");
-    label.innerHTML = `${(f.kind==="const"?"Constant":f.label)}${f.required?'<span class="req">*</span>':""}`;
+    label.innerHTML = `${(f.kind==="const"?"Constant":escapeHtml(f.label))}${f.required?'<span class="req">*</span>':""}`;
 
     const controlWrap = document.createElement("div");
     let control;
@@ -690,25 +687,14 @@ function renderFields(title, sectionKey, fields, onChange, showTodayBtn=false){
           return sub;
         };
 
-        // show subtext only when input empty
         let subtextEl = (control.value || "").trim().length > 0 ? null : makeSubtext();
 
         control.addEventListener("input", (e) => {
           f.dynamicDetail = e.target.value;
 
           const hasText = (e.target.value || "").trim().length > 0;
-
-          // delete subtext once there is text
-          if (hasText && subtextEl) {
-            subtextEl.remove();
-            subtextEl = null;
-          }
-
-          // re-add subtext if user clears to empty
-          if (!hasText && !subtextEl) {
-            subtextEl = makeSubtext();
-            controlWrap.appendChild(subtextEl);
-          }
+          if (hasText && subtextEl) { subtextEl.remove(); subtextEl = null; }
+          if (!hasText && !subtextEl) { subtextEl = makeSubtext(); controlWrap.appendChild(subtextEl); }
 
           onChange(i, f.value);
           autoGenerate();
@@ -742,7 +728,7 @@ function renderFields(title, sectionKey, fields, onChange, showTodayBtn=false){
         f.value = e.target.value;
         onChange(i, f.value);
         autoGenerate();
-        render(); // needed to immediately switch to text mode if triggered
+        render();
       });
 
       control.dataset.section = sectionKey;
@@ -771,7 +757,6 @@ function renderFields(title, sectionKey, fields, onChange, showTodayBtn=false){
       return;
     }
 
-    // text
     control = document.createElement("input");
     control.placeholder = `Enter ${f.label}...`;
     control.value = f.value || "";
@@ -844,7 +829,6 @@ function renderEscalClosure(){
           }
         });
       }
-      // Apply Process dynamic rule on auto-load
       state.escalClose = applyEscalProcessDynamicRule(closureMap.get(state.escalCloseCategory)?.label, state.escalClose);
       saveEscalClosureCategoryState(state.escalCloseCategory, state.escalClose);
     }
@@ -864,24 +848,7 @@ function renderEscalClosure(){
   });
 }
 
-/* =========================
-   ✅ CM-only: show only first duplicate label (e.g., only first "Invalid")
-   ========================= */
-function getVisibleClosureEntries(cfg){
-  const entries = [];
-  const seenLabels = new Set();
-
-  for(const [key, meta] of cfg.closureMap.entries()){
-    if(cfg.scope === "CM"){
-      if(seenLabels.has(meta.label)) continue; // hide duplicates by label in CM
-      seenLabels.add(meta.label);
-    }
-    entries.push([key, meta]);
-  }
-  return entries;
-}
-
-/* Shared closure UI renderer (UPDATED) */
+/* Shared closure UI renderer (no CM dedupe needed now) */
 function renderClosureUI(cfg){
   const row = document.createElement("div");
   row.className="row";
@@ -896,45 +863,7 @@ function renderClosureUI(cfg){
   ph.value=""; ph.textContent="— choose closure category —";
   sel.appendChild(ph);
 
-  const visibleEntries = getVisibleClosureEntries(cfg);
-
-  // If current category is hidden due to CM dedupe, fallback to first visible with same label
-  const currentKey = cfg.getCategory();
-  if(currentKey){
-    const isCurrentVisible = visibleEntries.some(([k]) => k === currentKey);
-    if(!isCurrentVisible){
-      const currentLabel = cfg.closureMap.get(currentKey)?.label;
-      const fallbackKey = visibleEntries.find(([,m]) => m.label === currentLabel)?.[0] || "";
-
-      if(fallbackKey && fallbackKey !== currentKey){
-        cfg.setCategory(fallbackKey);
-
-        cfg.setFields(buildFields(cfg.closureMap.get(fallbackKey).template, "close"));
-
-        const saved = cfg.loadState(fallbackKey);
-        if(saved && Array.isArray(saved.fields)){
-          cfg.getFields().forEach(f=>{
-            const match = saved.fields.find(sf => sf.kind===f.kind && sf.label===f.label);
-            if(match){
-              f.value = match.value ?? "";
-              if(match.dynamicDetail !== undefined) f.dynamicDetail = match.dynamicDetail;
-            }
-          });
-        }
-
-        if(cfg.scope === "Escal"){
-          cfg.setFields(applyEscalProcessDynamicRule(cfg.closureMap.get(fallbackKey)?.label, cfg.getFields()));
-        }
-
-        cfg.saveState(fallbackKey, cfg.getFields());
-      }else{
-        cfg.setCategory("");
-        cfg.setFields([]);
-      }
-    }
-  }
-
-  for(const [key, meta] of visibleEntries){
+  for(const [key, meta] of cfg.closureMap.entries()){
     const o = document.createElement("option");
     o.value = key;
     o.textContent = meta.label;
@@ -1140,9 +1069,7 @@ function buildBarString(fields){
   }).join("|");
 }
 
-/* =========================
-   Auto-generate output for current section
-   ========================= */
+/* Auto-generate output for current section */
 function generateCurrentSoft(){
   clearValidationMarks();
   showAlert("");
@@ -1327,6 +1254,17 @@ document.querySelectorAll('#mainTabs .tab').forEach(btn=>{
 /* Copy + Reset */
 document.getElementById("btnCopy").addEventListener("click", copyOutputStrict);
 document.getElementById("btnReset").addEventListener("click", resetCurrent);
+
+/* ✅ One-time cleanup: remove deleted CM category (Invalid__escal) from localStorage */
+(function cleanupDeletedCmInvalid(){
+  try{
+    localStorage.removeItem("barTemplateBuilder.cm.closureCategory.Invalid__escal");
+    const last = localStorage.getItem("barTemplateBuilder.cm.lastClosureCategory");
+    if(last === "Invalid__escal"){
+      localStorage.setItem("barTemplateBuilder.cm.lastClosureCategory", "Invalid__consult");
+    }
+  }catch(e){}
+})();
 
 /* Init */
 render();
