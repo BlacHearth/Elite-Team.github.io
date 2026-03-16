@@ -131,7 +131,7 @@
             <span class="copy-note" title="Copy is blocked if required fields in the ACTIVE section are missing.">
               <span class="copy-note-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 22a10 10 0 1 0-10-10 10 10 0 0 0 10 10Z" stroke="currentColor" stroke-width="2"/>
+                  <path d="M12 22a10 10 0 1 0-10-10 10 10 0 0 0 12 22Z" stroke="currentColor" stroke-width="2"/>
                   <path d="M8.5 12.5 10.5 14.5 15.5 9.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </span>
@@ -178,8 +178,11 @@ const CM_TEMPLATE = {
   closureNotes: [
     "Misrouted|Assignment Group|NA",
     "Mishandled|Agent Name|NA",
-    "Invalid__consult::Invalid|<End-user contact><L2 Contact><No consultation from SME><Lead Approval Only>|NA",
+
+    // NOTE: these are the two internal Invalids; CM dropdown will show ONLY the FIRST "Invalid"
+    "Invalid__consult::Invalid|&amp;lt;End-user contact&amp;gt;&amp;lt;L2 Contact&amp;gt;&amp;lt;No consultation from SME&amp;gt;&amp;lt;Lead Approval Only&amp;gt;|NA",
     "Invalid__escal::Invalid|NA|NA|NA|<No Ticket><Pending for Approval><No standard escalation process><No L1 triage><Vendor Issue>",
+
     "Outage|<Tracking Ticket><Master Ticket>|NA",
     "GSD out of scope|Issue|<Knowledge Base Gap><L2 asking help to involve other teams>",
     "Critical Escalation|<VIP Sender><Prolonged case due pushback><Expedite Request>|NA",
@@ -225,12 +228,36 @@ Thank you.`
 /* =========================
    Helpers
    ========================= */
-function splitBar(str){ return str.split("|").map(t => t.trim()); }
-function parseAngleOptions(token){
-  const raw = [...token.matchAll(/<([^>]+)>/g)].map(m => m[1].trim());
-  const esc = [...token.matchAll(/&lt;([^&gt;]+)&gt;/g)].map(m => m[1].trim());
-  return [...raw, ...esc].filter(Boolean);
+function splitBar(str){ return String(str || "").split("|").map(t => t.trim()); }
+
+// ✅ NEW: normalizer (fixes hidden spaces / NBSP issues)
+function normOpt(s){
+  return String(s ?? "")
+    .replace(/\u00A0/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
 }
+
+// ✅ UPDATED: supports raw <>, escaped &lt;&gt; AND double-escaped &amp;lt;&amp;gt;
+function parseAngleOptions(token){
+  const t = String(token ?? "");
+
+  // raw <...>
+  const raw  = [...t.matchAll(/<([^>]+)>/g)].map(m => m[1]);
+
+  // escaped &lt;...&gt;
+  const esc  = [...t.matchAll(/&lt;([^&]+?)&gt;/g)].map(m => m[1]);
+
+  // double-escaped &amp;lt;...&amp;gt;
+  const esc2 = [...t.matchAll(/&amp;lt;([^&]+?)&amp;gt;/g)].map(m => m[1]);
+
+  const merged = [...raw, ...esc, ...esc2].map(normOpt).filter(Boolean);
+
+  // de-dupe while preserving order
+  const seen = new Set();
+  return merged.filter(v => (seen.has(v) ? false : (seen.add(v), true)));
+}
+
 function parseCategoryKeyLabel(raw){
   const s = (raw || "").trim();
   const i = s.indexOf("::");
@@ -239,6 +266,7 @@ function parseCategoryKeyLabel(raw){
   const label = s.slice(i + 2).trim();
   return { key: key || s, label: label || s };
 }
+
 function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, s => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
@@ -249,10 +277,7 @@ function escapeHtml(str){
 const DROPDOWN_GROUPS = [
   ["APAC","EMEA","AMER"],
   ["BRCH","NBRCH","No Ticket"],
-
-  // ✅ Needed for Escal closure second token:
-  ["GSD","NGSD"],
-
+  ["GSD","NGSD"],                // ✅ One dropdown for <GSD><NGSD>
   ["GSD","NGSD","No Ticket"],
   ["End-user contact","L2 Contact","No consultation from SME","Lead Approval Only"],
   ["Tracking Ticket","Master Ticket"],
@@ -268,9 +293,16 @@ const DROPDOWN_GROUPS = [
   ["Work Stoppage","User finds the SLA too long","General Query"]
 ];
 
+// ✅ UPDATED: robust matching using normalized options
 function isDropdownGroup(opts){
-  return DROPDOWN_GROUPS.some(g => g.length === opts.length && g.every((v,i) => v === opts[i]));
+  const nOpts = (opts || []).map(normOpt);
+  return DROPDOWN_GROUPS.some(g => {
+    if(g.length !== nOpts.length) return false;
+    const nG = g.map(normOpt);
+    return nG.every((v,i) => v === nOpts[i]);
+  });
 }
+
 const CONSTANTS = new Set(["CM","GSD","NA","Support Ongoing"]);
 
 function formatDateMMDDYYYY(yyyyMmDd){
@@ -282,9 +314,17 @@ function formatDateMMDDYYYY(yyyyMmDd){
 }
 
 function classifyToken(token, context){
-  const trimmed = token.trim();
+  const trimmed = String(token ?? "").trim();
   const opts = parseAngleOptions(trimmed);
-  const isPureAngles = opts.length > 0 && trimmed.replace(/<[^>]+>|&lt;[^&gt;]+&gt;/g,"").trim() === "";
+
+  // ✅ UPDATED: robust "pure angles" detection for raw, escaped, and double-escaped
+  const isPureAngles =
+    opts.length > 0 &&
+    trimmed
+      .replace(/<[^>]+>/g, "")
+      .replace(/&lt;[^&]+?&gt;/g, "")
+      .replace(/&amp;lt;[^&]+?&amp;gt;/g, "")
+      .trim() === "";
 
   if(CONSTANTS.has(trimmed)) return { kind:"const", label:"Constant", value:trimmed, required:false };
   if(context === "desc" && trimmed.toLowerCase() === "date email received") return { kind:"date", label:trimmed, value:"", required:true };
@@ -293,6 +333,7 @@ function classifyToken(token, context){
     if(isDropdownGroup(opts)) return { kind:"select", label:"Select", options:opts, value:"", required:true };
     return opts.map(name => ({ kind:"text", label:name, value:"", required:true }));
   }
+
   return { kind:"text", label:trimmed, value:"", required:true };
 }
 
@@ -649,7 +690,7 @@ function renderFields(title, sectionKey, fields, onChange, showTodayBtn=false){
           return sub;
         };
 
-        // A) show subtext only when input empty
+        // show subtext only when input empty
         let subtextEl = (control.value || "").trim().length > 0 ? null : makeSubtext();
 
         control.addEventListener("input", (e) => {
@@ -657,13 +698,13 @@ function renderFields(title, sectionKey, fields, onChange, showTodayBtn=false){
 
           const hasText = (e.target.value || "").trim().length > 0;
 
-          // A) delete subtext once there is text
+          // delete subtext once there is text
           if (hasText && subtextEl) {
             subtextEl.remove();
             subtextEl = null;
           }
 
-          // A) re-add subtext if user clears to empty
+          // re-add subtext if user clears to empty
           if (!hasText && !subtextEl) {
             subtextEl = makeSubtext();
             controlWrap.appendChild(subtextEl);
@@ -823,7 +864,24 @@ function renderEscalClosure(){
   });
 }
 
-/* Shared closure UI renderer */
+/* =========================
+   ✅ CM-only: show only first duplicate label (e.g., only first "Invalid")
+   ========================= */
+function getVisibleClosureEntries(cfg){
+  const entries = [];
+  const seenLabels = new Set();
+
+  for(const [key, meta] of cfg.closureMap.entries()){
+    if(cfg.scope === "CM"){
+      if(seenLabels.has(meta.label)) continue; // hide duplicates by label in CM
+      seenLabels.add(meta.label);
+    }
+    entries.push([key, meta]);
+  }
+  return entries;
+}
+
+/* Shared closure UI renderer (UPDATED) */
 function renderClosureUI(cfg){
   const row = document.createElement("div");
   row.className="row";
@@ -838,7 +896,45 @@ function renderClosureUI(cfg){
   ph.value=""; ph.textContent="— choose closure category —";
   sel.appendChild(ph);
 
-  for(const [key, meta] of cfg.closureMap.entries()){
+  const visibleEntries = getVisibleClosureEntries(cfg);
+
+  // If current category is hidden due to CM dedupe, fallback to first visible with same label
+  const currentKey = cfg.getCategory();
+  if(currentKey){
+    const isCurrentVisible = visibleEntries.some(([k]) => k === currentKey);
+    if(!isCurrentVisible){
+      const currentLabel = cfg.closureMap.get(currentKey)?.label;
+      const fallbackKey = visibleEntries.find(([,m]) => m.label === currentLabel)?.[0] || "";
+
+      if(fallbackKey && fallbackKey !== currentKey){
+        cfg.setCategory(fallbackKey);
+
+        cfg.setFields(buildFields(cfg.closureMap.get(fallbackKey).template, "close"));
+
+        const saved = cfg.loadState(fallbackKey);
+        if(saved && Array.isArray(saved.fields)){
+          cfg.getFields().forEach(f=>{
+            const match = saved.fields.find(sf => sf.kind===f.kind && sf.label===f.label);
+            if(match){
+              f.value = match.value ?? "";
+              if(match.dynamicDetail !== undefined) f.dynamicDetail = match.dynamicDetail;
+            }
+          });
+        }
+
+        if(cfg.scope === "Escal"){
+          cfg.setFields(applyEscalProcessDynamicRule(cfg.closureMap.get(fallbackKey)?.label, cfg.getFields()));
+        }
+
+        cfg.saveState(fallbackKey, cfg.getFields());
+      }else{
+        cfg.setCategory("");
+        cfg.setFields([]);
+      }
+    }
+  }
+
+  for(const [key, meta] of visibleEntries){
     const o = document.createElement("option");
     o.value = key;
     o.textContent = meta.label;
@@ -856,10 +952,8 @@ function renderClosureUI(cfg){
       return;
     }
 
-    // build fields
     cfg.setFields(buildFields(cfg.closureMap.get(cfg.getCategory()).template, "close"));
 
-    // load saved
     const saved = cfg.loadState(cfg.getCategory());
     if(saved && Array.isArray(saved.fields)){
       cfg.getFields().forEach(f=>{
@@ -871,7 +965,6 @@ function renderClosureUI(cfg){
       });
     }
 
-    // Apply Process dynamic rule only for Escal
     if(cfg.scope === "Escal"){
       cfg.setFields(applyEscalProcessDynamicRule(cfg.closureMap.get(cfg.getCategory())?.label, cfg.getFields()));
     }
@@ -927,10 +1020,15 @@ function renderClosureUI(cfg){
   actions.appendChild(btnClear);
   builderEl.appendChild(actions);
 
-  renderFields(`Fields for: ${cfg.closureMap.get(cfg.getCategory())?.label || cfg.getCategory()}`, cfg.sectionKey, cfg.getFields(), (i,val)=>{
-    cfg.getFields()[i].value = val;
-    cfg.saveState(cfg.getCategory(), cfg.getFields());
-  });
+  renderFields(
+    `Fields for: ${cfg.closureMap.get(cfg.getCategory())?.label || cfg.getCategory()}`,
+    cfg.sectionKey,
+    cfg.getFields(),
+    (i,val)=>{
+      cfg.getFields()[i].value = val;
+      cfg.saveState(cfg.getCategory(), cfg.getFields());
+    }
+  );
 }
 
 /* SST Notes */
