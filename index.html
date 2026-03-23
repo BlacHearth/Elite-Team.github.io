@@ -120,6 +120,7 @@
           <button class="tab active" data-main="cm">CM</button>
           <button class="tab" data-main="escal">Escal</button>
           <button class="tab" data-main="sst">SST Notes</button>
+          <button class="tab" data-main="unassigned">Unassigned</button>
         </div>
 
         <div class="card-bd">
@@ -178,10 +179,7 @@ const CM_TEMPLATE = {
   closureNotes: [
     "Misrouted|Assignment Group|NA",
     "Mishandled|Agent Name|NA",
-
-    // ✅ Only ONE Invalid remains in CM
     "Invalid__consult::Invalid|<End-user contact><L2 Contact><No consultation from SME><Lead Approval Only>|NA",
-
     "Outage|<Tracking Ticket><Master Ticket>|NA",
     "GSD out of scope|Issue|<Knowledge Base Gap><L2 asking help to involve other teams>",
     "Critical Escalation|<VIP Sender><Prolonged case due pushback><Expedite Request>|NA",
@@ -221,6 +219,26 @@ Thank you.`
 };
 
 /* =========================
+   ✅ NEW: Unassigned tab data (behaves like SST Notes)
+   ========================= */
+const UNASSIGNED_REQUEST = {
+  reasons: [
+    "Ticket Left by GSD",
+    "Re-Opened",
+    "Re-assigned to GSD",
+    "Blind/Cold Transfer",
+    "Breached Blind/Cold Transfer"
+  ],
+  values: {
+    "Ticket Left by GSD": "Ticket was left unassigned in GSD queue.",
+    "Re-Opened": "Re-opened ticket. Please follow up with user to understand why this was re-opened. Thank you.",
+    "Re-assigned to GSD": "Please review this again and proceed as per process. Check with any available TL, POC/SME or CM if you need assistance, and before ticket reassignment.",
+    "Blind/Cold Transfer": "Blind or cold transfers to GSD are not permitted. Prior to reassigning a ticket, kindly email the GSD Case Management team at HelpDeskCaseManagement@aig.com with the reason, findings or justification for the transfer.",
+    "Breached Blind/Cold Transfer": "Blind\\cold Transfer not accepted.3.2.4 Breached Ticket. In cases where the SLA of a ticket is about to be breached or has already been breached while assigned to a queue, the ticket can be escalated functionally or hierarchically to ensure that it is resolved at the earliest. A breached ticket should not be canceled, nor a request made to the Global Service Desk to open a new ticket as a replacement. Breached tickets should be prioritized and worked on without cancelling. Ticket assignee is prohibited to cancel and open a new ticket to replace the 'breached' ticket for the same matter. Please engage CaseManagement (AIGGS-CaseManagementTeam@aig.com) if you wish to move this ticket to GSD. Thank you"
+  }
+};
+
+/* =========================
    Helpers
    ========================= */
 function splitBar(str){ return String(str || "").split("|").map(t => t.trim()); }
@@ -232,7 +250,6 @@ function normOpt(s){
     .replace(/\s+/g, " ");
 }
 
-// ✅ Supports: raw <...>, &lt;...&gt;, &amp;lt;...&amp;gt;, &amp;amp;lt;...&amp;amp;gt;
 function parseAngleOptions(token){
   const t = String(token ?? "");
 
@@ -270,7 +287,7 @@ function escapeHtml(str){
 const DROPDOWN_GROUPS = [
   ["APAC","EMEA","AMER"],
   ["BRCH","NBRCH","No Ticket"],
-  ["GSD","NGSD"],                // One dropdown for <GSD><NGSD>
+  ["GSD","NGSD"],
   ["GSD","NGSD","No Ticket"],
   ["End-user contact","L2 Contact","No consultation from SME","Lead Approval Only"],
   ["Tracking Ticket","Master Ticket"],
@@ -309,7 +326,6 @@ function classifyToken(token, context){
   const trimmed = String(token ?? "").trim();
   const opts = parseAngleOptions(trimmed);
 
-  // ✅ Critical fix: recognize "pure angle options" across all encodings
   const isPureAngles =
     opts.length > 0 &&
     trimmed
@@ -444,12 +460,17 @@ const SST_STORAGE_KEY = "barTemplateBuilder.sst.channel";
 function saveSstChannel(val){ try{ localStorage.setItem(SST_STORAGE_KEY, val || ""); }catch(e){} }
 function loadSstChannel(){ try{ return localStorage.getItem(SST_STORAGE_KEY) || ""; }catch(e){ return ""; } }
 
+/* ✅ Unassigned local storage (same behavior as SST) */
+const UNASSIGNED_STORAGE_KEY = "barTemplateBuilder.unassigned.workNote";
+function saveUnassignedReason(val){ try{ localStorage.setItem(UNASSIGNED_STORAGE_KEY, val || ""); }catch(e){} }
+function loadUnassignedReason(){ try{ return localStorage.getItem(UNASSIGNED_STORAGE_KEY) || ""; }catch(e){ return ""; } }
+
 /* =========================
    App state
    ========================= */
-let mainView = "cm";
-let cmView = "short";
-let escalView = "short";
+let mainView = "cm";   // cm | escal | sst | unassigned
+let cmView = "short";  // short | desc | close
+let escalView = "short"; // short | desc | close
 
 const state = {
   cmShort: buildFields(CM_TEMPLATE.shortDescription, "short"),
@@ -462,7 +483,10 @@ const state = {
   escalCloseCategory: "",
   escalClose: [],
 
-  sstChannel: loadSstChannel()
+  sstChannel: loadSstChannel(),
+
+  // ✅ Unassigned selection
+  unassignedReason: loadUnassignedReason()
 };
 
 function setAutoDateIfEmpty(fields){
@@ -556,7 +580,12 @@ function render(){
     return;
   }
 
-  renderSstNotes();
+  if(mainView === "sst"){
+    renderSstNotes();
+    return;
+  }
+
+  renderUnassigned(); // ✅ NEW TAB
 }
 
 function renderSubTabs(views, activeView, setViewFn){
@@ -1009,6 +1038,61 @@ function renderSstNotes(){
   builderEl.appendChild(hint);
 }
 
+/* ✅ NEW: Unassigned tab renderer (same behavior as SST Notes) */
+function renderUnassigned(){
+  const headerRow = document.createElement("div");
+  headerRow.style.display="flex";
+  headerRow.style.alignItems="center";
+  headerRow.style.justifyContent="space-between";
+  headerRow.style.gap="10px";
+  headerRow.style.marginBottom="6px";
+
+  const titleEl = document.createElement("div");
+  titleEl.style.fontWeight="900";
+  titleEl.style.fontSize="13px";
+  titleEl.textContent="Unassigned";
+  headerRow.appendChild(titleEl);
+  builderEl.appendChild(headerRow);
+
+  const row = document.createElement("div");
+  row.className="row";
+
+  const label = document.createElement("label");
+  label.innerHTML = `Work notes<span class="req">*</span>`;
+
+  const controlWrap = document.createElement("div");
+  const sel = document.createElement("select");
+  sel.dataset.section="unassigned";
+  sel.dataset.index="0";
+
+  const ph = document.createElement("option");
+  ph.value=""; ph.textContent="— choose —";
+  sel.appendChild(ph);
+
+  UNASSIGNED_REQUEST.reasons.forEach(r=>{
+    const o = document.createElement("option");
+    o.value=r; o.textContent=r;
+    sel.appendChild(o);
+  });
+
+  sel.value = state.unassignedReason || "";
+  sel.addEventListener("change", ()=>{
+    state.unassignedReason = sel.value;
+    saveUnassignedReason(state.unassignedReason);
+    autoGenerate();
+  });
+
+  controlWrap.appendChild(sel);
+  row.appendChild(label);
+  row.appendChild(controlWrap);
+  builderEl.appendChild(row);
+
+  const hint = document.createElement("div");
+  hint.className="hint";
+  hint.innerHTML = `This tab outputs the selected <strong>Work notes</strong> text automatically.`;
+  builderEl.appendChild(hint);
+}
+
 /* =========================
    Validation + Output
    ========================= */
@@ -1063,6 +1147,7 @@ function buildBarString(fields){
   }).join("|");
 }
 
+/* Auto-generate output for current section */
 function generateCurrentSoft(){
   clearValidationMarks();
   showAlert("");
@@ -1121,15 +1206,28 @@ function generateCurrentSoft(){
     return;
   }
 
-  // SST Notes
+  if(mainView==="sst"){
+    const missing=[];
+    const ch=(state.sstChannel||"").trim();
+    if(!ch){
+      missing.push('SST Notes: Missing "Channel"');
+      const el = builderEl.querySelector('[data-section="sst"][data-index="0"]');
+      if(el) el.classList.add("invalid");
+    }
+    outputEl.value = SST_REQUEST.template.replaceAll("(Channel)", ch || "(Channel)");
+    if(missing.length) showAlert("⚠️ Missing required fields (output still generated):\n"+missing.join("\n"));
+    return;
+  }
+
+  // ✅ Unassigned
   const missing=[];
-  const ch=(state.sstChannel||"").trim();
-  if(!ch){
-    missing.push('SST Notes: Missing "Channel"');
-    const el = builderEl.querySelector('[data-section="sst"][data-index="0"]');
+  const r=(state.unassignedReason||"").trim();
+  if(!r){
+    missing.push('Unassigned: Missing "Work notes"');
+    const el = builderEl.querySelector('[data-section="unassigned"][data-index="0"]');
     if(el) el.classList.add("invalid");
   }
-  outputEl.value = SST_REQUEST.template.replaceAll("(Channel)", ch || "(Channel)");
+  outputEl.value = UNASSIGNED_REQUEST.values[r] || "(select a Work notes option)";
   if(missing.length) showAlert("⚠️ Missing required fields (output still generated):\n"+missing.join("\n"));
 }
 
@@ -1157,10 +1255,21 @@ function validateStrictCurrentSection(){
     return missing;
   }
 
-  const ch=(state.sstChannel||"").trim();
-  if(!ch){
-    missing.push('SST Notes: Missing "Channel"');
-    const el = builderEl.querySelector('[data-section="sst"][data-index="0"]');
+  if(mainView==="sst"){
+    const ch=(state.sstChannel||"").trim();
+    if(!ch){
+      missing.push('SST Notes: Missing "Channel"');
+      const el = builderEl.querySelector('[data-section="sst"][data-index="0"]');
+      if(el) el.classList.add("invalid");
+    }
+    return missing;
+  }
+
+  // ✅ Unassigned strict validation
+  const r=(state.unassignedReason||"").trim();
+  if(!r){
+    missing.push('Unassigned: Missing "Work notes"');
+    const el = builderEl.querySelector('[data-section="unassigned"][data-index="0"]');
     if(el) el.classList.add("invalid");
   }
   return missing;
@@ -1223,8 +1332,16 @@ function resetCurrent(){
     render(); autoGenerate(); return;
   }
 
-  state.sstChannel = "";
-  saveSstChannel("");
+  if(mainView==="sst"){
+    state.sstChannel = "";
+    saveSstChannel("");
+    render(); autoGenerate();
+    return;
+  }
+
+  // ✅ Unassigned reset
+  state.unassignedReason = "";
+  saveUnassignedReason("");
   render(); autoGenerate();
 }
 
@@ -1248,7 +1365,7 @@ document.querySelectorAll('#mainTabs .tab').forEach(btn=>{
 document.getElementById("btnCopy").addEventListener("click", copyOutputStrict);
 document.getElementById("btnReset").addEventListener("click", resetCurrent);
 
-/* ✅ One-time cleanup: remove deleted CM category (Invalid__escal) if it exists */
+/* ✅ One-time cleanup for removed CM category (Invalid__escal) */
 (function cleanupDeletedCmInvalid(){
   try{
     localStorage.removeItem("barTemplateBuilder.cm.closureCategory.Invalid__escal");
